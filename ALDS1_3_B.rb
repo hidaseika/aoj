@@ -1,12 +1,5 @@
 n, q = gets.split(" ").map(&:to_i)
 
-processes = []
-
-n.times do
-  name, time = gets.split(" ")
-  processes << Processs.new(name, time)
-end
-
 class Processs
   attr_accessor :name, :time
   
@@ -14,6 +7,13 @@ class Processs
     @name = name
     @time = time.to_i
   end
+end
+
+processes = []
+
+n.times do
+  name, time = gets.split(" ")
+  processes << Processs.new(name, time)
 end
 
 class RoundRobinScheduling
