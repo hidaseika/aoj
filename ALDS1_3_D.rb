@@ -4,7 +4,6 @@ class Ground
   def initialize(ground)
     @str_ground = ground # ["/","/", "\"]
     @int_ground = to_i_array # [1, 2, 1]
-    @str_int_ground = @str_ground.zip(@int_ground) # [ ["/", 1], ["/", 2], ["\", 1] ]
   end
 
   def to_i_array
@@ -17,35 +16,52 @@ class Ground
       elsif g == "\\"
 	h -= 1
       end
-    end
+    end.unshift(0)
   end
 
-  def parsed_ground
-    parsed_ground = []
+  def puddles
     peak_index = @int_ground.index(@int_ground.max)
-    left_ground = @str_int_ground[0..peak_index]
-    right_ground = @str_ground[(peak_index + 1)..-1].map{|g| {"/" => "\\", "\\" => "/", "_" => "_"}[g]}.zip(@int_ground[peak_index..-2]).reverse
+    left_puddles = UpSlope.new(@int_ground[0..peak_index]).find_puddles
+    right_puddles = DownSlope.new(@int_ground[peak_index..-1]).find_puddles
 
-    parsed_ground += find_puddles(left_ground)
-    parsed_ground += find_puddles(right_ground).reverse
-    parsed_ground
+    left_puddles + right_puddles
+  end
+end
+
+class DownSlope
+  def initialize(int_ground)
+    @upslope = UpSlope.new(int_ground.reverse)
   end
 
-  def find_puddles(ground)
-    parsed_ground = []
-    start_g = nil
-    ground.each_with_index do |g, i|
-      start_g ||= {ground: g, index: i} if g[0] == "\\" # start_g {ground: ["/", 1], index: 1}
-      
-      if start_g != nil  && start_g[:ground][1] + 1 == g[1] && start_g[:index] != i
-        end_g = {ground: g, index: i}
-        parsed_ground << ground[start_g[:index]..end_g[:index]]
-        start_g = nil
-        end_g = nil
+  def find_puddles
+    @upslope.find_puddles.reverse
+  end
+end
+
+class UpSlope
+  def initialize(int_ground)
+    @points = int_ground
+  end
+
+  def find_puddles
+    puddles = []
+    start = 0
+    @points.each_with_index do |g, i|
+      if i == 0
+        # スキップ
+        next
+      elsif start != (i - 1) # startが固定されてる
+        if @points[start] == g  # 終わり
+          puddles << Puddle.new(@points[start..i])
+          start = i
+        end
+      elsif @points[i-1] <= g  # 上りか平面
+        start = i
+      else # 初めて下りになった時
+        # startを固定する
       end
     end
-
-    parsed_ground # ["/", "/", "\"]
+    puddles    # [Puddle(...), Puddle(..)]
   end
 end
 
@@ -58,27 +74,17 @@ class Puddle
   end
 
   private
+
+  # 真ん中でならす
   def calculate_size
-    y = 0
-    size = 0
-    for g in @ground do
-      if g[0] == "_"
-        size += y
-      elsif g[0] == "\\"
-        y += 1
-        size += ( 0.5 + y - 1 )
-      else
-        size += ( 0.5 + y - 1 )
-        y -= 1
-      end
-    end
-    size.to_i
+    max = @ground.max
+    max * @ground.size - @ground.sum
   end
 end
 
 ground = Ground.new(g)
 
-sizes = ground.parsed_ground.map {|pg| Puddle.new(pg).size}
+sizes = ground.puddles.map(&:size)
 kosu = sizes.length
 
 puts sizes.sum
